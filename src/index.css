@@ -12,7 +12,7 @@
   --success: #10b981;
   --warning: #f59e0b;
   --error: #ef4444;
-  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-main: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 * {
@@ -27,9 +27,14 @@ body {
   color: var(--text-main);
   line-height: 1.5;
   overflow-x: hidden;
-  background: radial-gradient(circle at top left, rgba(139, 92, 246, 0.15), transparent),
-              radial-gradient(circle at bottom right, rgba(236, 72, 153, 0.15), transparent),
-              var(--bg-darker);
+  background:
+    radial-gradient(circle at top left, rgba(139, 92, 246, 0.15), transparent),
+    radial-gradient(
+      circle at bottom right,
+      rgba(236, 72, 153, 0.15),
+      transparent
+    ),
+    var(--bg-darker);
   min-height: 100vh;
 }
 
@@ -40,7 +45,9 @@ body {
   border: 1px solid var(--glass-border);
   border-radius: 1rem;
   padding: 1.5rem;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .glass-card:hover {
@@ -79,14 +86,29 @@ body {
   margin-right: 8px;
 }
 
-.status-online { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
-.status-offline { background-color: var(--error); box-shadow: 0 0 8px var(--error); }
-.status-busy { background-color: var(--warning); box-shadow: 0 0 8px var(--warning); }
+.status-online {
+  background-color: var(--success);
+  box-shadow: 0 0 8px var(--success);
+}
+.status-offline {
+  background-color: var(--error);
+  box-shadow: 0 0 8px var(--error);
+}
+.status-busy {
+  background-color: var(--warning);
+  box-shadow: 0 0 8px var(--warning);
+}
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
