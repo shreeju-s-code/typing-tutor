@@ -1,8 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PRACTICES } from "../data/practices";
+import axios from "axios";
+
+const API_BASE = import.meta.env.PROD
+  ? "https://shreeju-s-typing-tutor-backend.onrender.com"
+  : "http://localhost:5000";
 
 export const useTypingViewModel = () => {
   const [currentLevel, setCurrentLevel] = useState(0);
+  const [unlockedLevel, setUnlockedLevel] = useState(0);
   const [textToType, setTextToType] = useState(PRACTICES[0].text);
   const [userInput, setUserInput] = useState("");
   const [startTime, setStartTime] = useState(null);
@@ -15,15 +21,8 @@ export const useTypingViewModel = () => {
   const [timeOption, setTimeOption] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null);
 
-  const finishSession = useCallback((finalInput, finalStartTime) => {
-    setIsFinished(true);
-    const endTime = Date.now();
-    const timeInMinutes = (endTime - finalStartTime) / 60000;
-    const wpmValue = Math.round(
-      finalInput.length / 5 / Math.max(0.01, timeInMinutes),
-    );
-    setWpm(wpmValue);
-  }, []);
+  const [user, setUser] = useState(null);
+  const [wpmHistory, setWpmHistory] = useState([]);
 
   const reset = useCallback(() => {
     setUserInput("");
@@ -38,6 +37,107 @@ export const useTypingViewModel = () => {
       setTimeLeft(null);
     }
   }, [timeOption]);
+
+  // Fetch user details and progression on load
+  useEffect(() => {
+    const fetchProgress = async () => {
+      const token = localStorage.getItem("token");
+      const storedUser = localStorage.getItem("user");
+      if (token && storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+          const response = await axios.get(`${API_BASE}/api/progress`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const { currentLevel: dbLevel, wpmHistory: dbHistory } = response.data;
+          setUnlockedLevel(dbLevel);
+          setCurrentLevel(dbLevel);
+          setTextToType(PRACTICES[dbLevel].text);
+          setWpmHistory(dbHistory || []);
+        } catch (error) {
+          console.error("Error fetching progress from MongoDB:", error);
+          if (error.response?.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            setUser(null);
+          }
+        }
+      } else {
+        const guestLevel = localStorage.getItem("guestLevel");
+        const guestHist = JSON.parse(localStorage.getItem("guestHistory") || "[]");
+        setWpmHistory(guestHist);
+        if (guestLevel) {
+          const lvl = Number(guestLevel);
+          setUnlockedLevel(lvl);
+          setCurrentLevel(lvl);
+          setTextToType(PRACTICES[lvl].text);
+        }
+      }
+    };
+    fetchProgress();
+  }, []);
+
+  const finishSession = useCallback((finalInput, finalStartTime) => {
+    setIsFinished(true);
+    const endTime = Date.now();
+    const timeInMinutes = (endTime - finalStartTime) / 60000;
+    const wpmValue = Math.round(
+      finalInput.length / 5 / Math.max(0.01, timeInMinutes),
+    );
+    setWpm(wpmValue);
+
+    let errorCount = 0;
+    for (let i = 0; i < finalInput.length; i++) {
+      if (finalInput[i] !== textToType[i]) errorCount++;
+    }
+    const finalAcc = Math.max(
+      0,
+      Math.round(
+        ((finalInput.length - errorCount) / Math.max(1, finalInput.length)) * 100,
+      ),
+    );
+    setAccuracy(finalAcc);
+
+    const isCurrentAtMax = currentLevel === unlockedLevel;
+    const nextUnlocked = isCurrentAtMax
+      ? (unlockedLevel + 1) % PRACTICES.length
+      : unlockedLevel;
+
+    const token = localStorage.getItem("token");
+    if (token) {
+      axios.post(`${API_BASE}/api/progress`, {
+        currentLevel: nextUnlocked,
+        practiceLog: {
+          wpm: wpmValue,
+          accuracy: finalAcc,
+          level: currentLevel,
+          levelName: PRACTICES[currentLevel].name
+        }
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(response => {
+        setUnlockedLevel(response.data.currentLevel);
+        setWpmHistory(response.data.wpmHistory || []);
+      })
+      .catch(err => console.error("Error syncing progress to MongoDB:", err));
+    } else {
+      localStorage.setItem("guestLevel", nextUnlocked);
+      setUnlockedLevel(nextUnlocked);
+      
+      const localHistory = JSON.parse(localStorage.getItem("guestHistory") || "[]");
+      const newLog = {
+        wpm: wpmValue,
+        accuracy: finalAcc,
+        level: currentLevel,
+        levelName: PRACTICES[currentLevel].name,
+        date: new Date().toISOString()
+      };
+      const updatedHistory = [...localHistory, newLog];
+      localStorage.setItem("guestHistory", JSON.stringify(updatedHistory));
+      setWpmHistory(updatedHistory);
+    }
+  }, [currentLevel, unlockedLevel, textToType]);
 
   const userInputRef = useRef(userInput);
   useEffect(() => {
@@ -90,6 +190,19 @@ export const useTypingViewModel = () => {
     setTimeOption(null);
     reset();
   }, [currentLevel, reset]);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+    const guestLevel = localStorage.getItem("guestLevel");
+    const lvl = guestLevel ? Number(guestLevel) : 0;
+    setUnlockedLevel(lvl);
+    setCurrentLevel(lvl);
+    setTextToType(PRACTICES[lvl].text);
+    setWpmHistory(JSON.parse(localStorage.getItem("guestHistory") || "[]"));
+    reset();
+  }, [reset]);
 
   const handleInput = (e) => {
     const value = e.target.value;
@@ -146,14 +259,21 @@ export const useTypingViewModel = () => {
       setLastCaseMode(nextMode);
       fetchInformativeText(nextMode);
     },
-    currentLevelName: PRACTICES[currentLevel].name,
+    currentLevelName: PRACTICES[currentLevel] ? PRACTICES[currentLevel].name : "Custom level",
     practices: PRACTICES,
     currentLevel,
+    unlockedLevel,
     setCurrentLevel: (idx) => {
+      if (idx > unlockedLevel) return; // Prevent selection of locked levels
       setCurrentLevel(idx);
       setTextToType(PRACTICES[idx].text);
       setTimeOption(null);
       reset();
     },
+    user,
+    logout,
+    wpmHistory
   };
 };
+
+

@@ -1,5 +1,6 @@
 import { useTypingViewModel } from "../viewmodels/TypingViewModel";
 import { useRef, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import KeyboardGuide from "../components/KeyboardGuide";
 import {
   Trophy,
@@ -21,6 +22,12 @@ import {
   Globe,
   Volume2,
   VolumeX,
+  LogIn,
+  LogOut,
+  Cloud,
+  CloudOff,
+  Lock,
+  BarChart2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -29,6 +36,7 @@ const TypingPractice = () => {
   const inputRef = useRef(null);
   const activeCharRef = useRef(null);
   const [showTimeOptions, setShowTimeOptions] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (activeCharRef.current) {
@@ -238,9 +246,24 @@ const TypingPractice = () => {
               >
                 {vm.currentLevelName}
               </h1>
-              <p style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                Practice {vm.currentLevel + 1} of {vm.practices.length}
-              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
+                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                  Practice {vm.currentLevel + 1} of {vm.practices.length}
+                </span>
+                {vm.user ? (
+                  <span style={{ fontSize: "0.65rem", background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.3)", color: "#34d399", padding: "1px 6px", borderRadius: "10px", display: "inline-flex", alignItems: "center", gap: "2px" }}>
+                    <Cloud size={10} /> Cloud Sync
+                  </span>
+                ) : (
+                  <span
+                    onClick={() => navigate("/auth")}
+                    style={{ fontSize: "0.65rem", background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.3)", color: "#fbbf24", padding: "1px 6px", borderRadius: "10px", display: "inline-flex", alignItems: "center", gap: "2px", cursor: "pointer" }}
+                    title="Click to log in and save progress"
+                  >
+                    <CloudOff size={10} /> Guest Mode (Save Progress)
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -452,10 +475,92 @@ const TypingPractice = () => {
                 )}
                 <span style={{ fontSize: "0.7rem" }}>Sound</span>
               </button>
+
+              <button
+                onClick={() => navigate("/stats")}
+                className="glass-card"
+                style={{
+                  padding: "0.4rem 0.75rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid #334155",
+                  color: "white",
+                }}
+              >
+                <BarChart2 size={12} color="#8b5cf6" />
+                <span style={{ fontSize: "0.7rem" }}>Stats</span>
+              </button>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            {vm.user ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.6rem",
+                  background: "rgba(139, 92, 246, 0.1)",
+                  border: "1px solid rgba(139, 92, 246, 0.2)",
+                  padding: "0.4rem 0.8rem",
+                  borderRadius: "0.75rem",
+                  marginRight: "0.25rem",
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "white" }}>
+                    {vm.user.username}
+                  </span>
+                  <span style={{ fontSize: "0.6rem", color: "#10b981", display: "flex", alignItems: "center", gap: "2px" }}>
+                    <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#10b981" }} />
+                    Synced
+                  </span>
+                </div>
+                <button
+                  onClick={vm.logout}
+                  title="Logout"
+                  style={{
+                    background: "rgba(239, 68, 68, 0.15)",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    borderRadius: "0.5rem",
+                    padding: "0.3rem",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#f87171",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)")}
+                >
+                  <LogOut size={12} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => navigate("/auth")}
+                className="glass-card"
+                style={{
+                  padding: "0.5rem 1rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  border: "1px solid #8b5cf6",
+                  background: "rgba(139, 92, 246, 0.1)",
+                  color: "#a78bfa",
+                  fontWeight: "bold",
+                  marginRight: "0.25rem",
+                }}
+              >
+                <LogIn size={14} />
+                <span style={{ fontSize: "0.85rem" }}>Login</span>
+              </button>
+            )}
             <button
               onClick={vm.reset}
               className="glass-card"
@@ -501,31 +606,47 @@ const TypingPractice = () => {
             scrollbarWidth: "thin",
           }}
         >
-          {vm.practices.map((ex, idx) => (
-            <button
-              key={ex.id}
-              onClick={() => vm.setCurrentLevel(idx)}
-              style={{
-                padding: "0.4rem 0.8rem",
-                borderRadius: "2rem",
-                fontSize: "0.7rem",
-                whiteSpace: "nowrap",
-                cursor: "pointer",
-                background:
-                  vm.currentLevel === idx
-                    ? "rgba(139, 92, 246, 0.2)"
-                    : "rgba(255,255,255,0.05)",
-                color: vm.currentLevel === idx ? "#a78bfa" : "#94a3b8",
-                border:
-                  vm.currentLevel === idx
-                    ? "1px solid #8b5cf6"
-                    : "1px solid transparent",
-                transition: "all 0.2s",
-              }}
-            >
-              {ex.name}
-            </button>
-          ))}
+          {vm.practices.map((ex, idx) => {
+            const isLocked = idx > vm.unlockedLevel;
+            return (
+              <button
+                key={ex.id}
+                onClick={() => !isLocked && vm.setCurrentLevel(idx)}
+                disabled={isLocked}
+                style={{
+                  padding: "0.4rem 0.8rem",
+                  borderRadius: "2rem",
+                  fontSize: "0.7rem",
+                  whiteSpace: "nowrap",
+                  cursor: isLocked ? "not-allowed" : "pointer",
+                  background:
+                    vm.currentLevel === idx
+                      ? "rgba(139, 92, 246, 0.2)"
+                      : isLocked
+                        ? "rgba(255,255,255,0.01)"
+                        : "rgba(255,255,255,0.05)",
+                  color:
+                    vm.currentLevel === idx
+                      ? "#a78bfa"
+                      : isLocked
+                        ? "#475569"
+                        : "#94a3b8",
+                  border:
+                    vm.currentLevel === idx
+                      ? "1px solid #8b5cf6"
+                      : "1px solid transparent",
+                  transition: "all 0.2s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                  opacity: isLocked ? 0.5 : 1,
+                }}
+              >
+                {isLocked && <Lock size={10} color="#475569" />}
+                <span>{ex.name}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Dynamic Instruction Hint */}
@@ -1311,6 +1432,8 @@ const TypingPractice = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+
     </div>
   );
 };

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://shreeju-s-typing-tutor.vercel.app/sitemap.xml
